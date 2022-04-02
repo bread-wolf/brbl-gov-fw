@@ -1,0 +1,7 @@
+# Ignore vscode related files and folders
+.vscode/
+
+# Ignore pio build stuff
+.pio
+platformio.ini
+
