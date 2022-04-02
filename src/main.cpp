@@ -1,9 +1,14 @@
-#include <Arduino.h>
+/*
+ * Author: Augustin.B
+ * Date  : 02.04.2022
+ */
 
-void setup() {
-  // put your setup code here, to run once:
-}
+int main(void)
+{
+    for(;;)
+    {
+      
+    }
 
-void loop() {
-  // put your main code here, to run repeatedly:
+    return 0;
 }
