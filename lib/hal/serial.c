@@ -97,7 +97,7 @@ bool serial_init(serial_channel channel, uint32_t baudrate, serial_format format
     channel.serial_reg->CTRLB = (USART_RXEN_bm | USART_TXEN_bm);
 
     // Enable Receive Complete and Transmit Complete interrupts.
-    channel.serial_reg->CTRLA = (USART_RXCIE_bm | USART_TXCIE_bm);
+    channel.serial_reg->CTRLA = (USART_RXCIE_bm | USART_DREIE_bm);
 
     // Enable interrupts and return true.
     sei();
