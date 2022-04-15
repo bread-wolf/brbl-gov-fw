@@ -6,9 +6,24 @@
 #ifndef SERIAL_H_
 #define SERIAL_H_
 
+#include "ringBuff.h"
+
+#include <avr/io.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+// Define SERIAL_USE_UARTx in main to instantiate needed channels.
+typedef struct
+{
+    USART_t* const serial_reg;
+    ringBuff* const serial_ringBuff;
+} serial_channel;
+extern serial_channel serial_channel0;
+extern serial_channel serial_channel1;
+extern serial_channel serial_channel2;
+extern serial_channel serial_channel3;
 
 typedef enum
 {
@@ -29,21 +44,21 @@ typedef enum
 
 // Used to init or reinit chosen UART peripheral.
 // Does not handle pin mux or direction (RX and TX need to be set as input and output).
-bool serial_init(USART_t* channel, uint32_t baudrate, serial_format format);
+bool serial_init(serial_channel channel, uint32_t baudrate, serial_format format);
 
 // Read and write uint8_t arrays from/to uart ring buffers.
-bool serial_read(USART_t* channel, uint8_t* rData, size_t numBytes);
-bool serial_write(USART_t* channel, const uint8_t* wData, size_t numBytes);
+bool serial_read(serial_channel channel, uint8_t* rData, size_t numBytes);
+bool serial_write(serial_channel channel, const uint8_t* wData, size_t numBytes);
 
 // Returns bytes available for read, and remaining free space in write buffer.
-int serial_available(USART_t* channel);
-int serial_availableForWrite(USART_t* channel);
+int serial_available(serial_channel channel);
+int serial_availableForWrite(serial_channel channel);
 
 // Wait for any data in transmit buffer to actually transmit.
-void serial_flush(USART_t* channel);
+void serial_flush(serial_channel* channel);
 
 // Discard received data that has not been read.
-void serial_clear(USART_t* channel);
+void serial_clear(serial_channel* channel);
 
 
 #endif /* SERIAL_H_ */
