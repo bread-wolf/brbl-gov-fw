@@ -55,10 +55,10 @@ int serial_available(serial_channel channel);
 int serial_availableForWrite(serial_channel channel);
 
 // Wait for any data in transmit buffer to actually transmit.
-void serial_flush(serial_channel* channel);
+void serial_flush(serial_channel channel);
 
 // Discard received data that has not been read.
-void serial_clear(serial_channel* channel);
+void serial_clear(serial_channel channel);
 
 
 #endif /* SERIAL_H_ */

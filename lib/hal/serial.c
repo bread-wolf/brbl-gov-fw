@@ -132,6 +132,15 @@ int serial_availableForWrite(serial_channel channel)
     return channel.serial_writeBuff->length - ringBuff_count(channel.serial_writeBuff);
 }
 
+void serial_flush(serial_channel channel)
+{
+    while (ringBuff_count(channel.serial_writeBuff) > 0);
+}
+
+void serial_clear(serial_channel channel)
+{
+    ringBuff_clear(channel.serial_writeBuff);
+}
 #ifdef SERIAL_USE_UART0
 SERIAL_INSTANTIATE_CHANNEL(0);
 #endif /* SERIAL_USE_UART0 */

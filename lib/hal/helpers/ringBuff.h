@@ -45,4 +45,10 @@ inline __attribute__((always_inline)) size_t ringBuff_count(ringBuff* buffer)
     return (buffer->head >= buffer->tail) ? (buffer->head - buffer->tail) : (buffer->length - (buffer->tail - buffer->head));
 }
 
+inline __attribute__((always_inline)) void ringBuff_clear(ringBuff* buffer)
+{
+    buffer->head = 0;
+    buffer->tail = 0;
+}
+
 #endif /* RINGBUFF_H_ */
