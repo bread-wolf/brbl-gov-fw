@@ -46,11 +46,11 @@ typedef enum
 // Does not handle pin mux or direction (RX and TX need to be set as input and output).
 bool serial_init(serial_channel channel, uint32_t baudrate, serial_format format);
 
-// Read and write uint8_t arrays from/to uart ring buffers.
-bool serial_read(serial_channel channel, uint8_t* rData, size_t numBytes);
-bool serial_write(serial_channel channel, const uint8_t* wData, size_t numBytes);
+// Read and write single byte from/to uart ring buffers.
+bool serial_read(serial_channel channel, uint8_t* rData);
+bool serial_write(serial_channel channel, const uint8_t* wData);
 
-// Returns bytes available for read, and remaining free space in write buffer.
+// Returns bytes available for reading, and remaining free space in write buffer.
 int serial_available(serial_channel channel);
 int serial_availableForWrite(serial_channel channel);
 

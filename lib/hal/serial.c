@@ -112,6 +112,25 @@ bool serial_init(serial_channel channel, uint32_t baudrate, serial_format format
     return true;
 }
 
+bool serial_read(serial_channel channel, uint8_t* rData)
+{
+    return ringBuff_pop(channel.serial_readBuff, rData);
+}
+
+bool serial_write(serial_channel channel, const uint8_t* wData)
+{
+    return ringBuff_push(channel.serial_writeBuff, wData);
+}
+
+int serial_available(serial_channel channel)
+{
+    return ringBuff_count(channel.serial_readBuff);
+}
+
+int serial_availableForWrite(serial_channel channel)
+{
+    return channel.serial_writeBuff->length - ringBuff_count(channel.serial_writeBuff);
+}
 
 #ifdef SERIAL_USE_UART0
 SERIAL_INSTANTIATE_CHANNEL(0);
