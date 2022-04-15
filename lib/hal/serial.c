@@ -84,9 +84,8 @@ bool serial_init(serial_channel channel, uint32_t baudrate, serial_format format
     cli();
 
     // Write baudrate, fomula assumes we only use 16x oversampling.
-    uint16_t baudReg = (4 * (uint32_t)F_CPU) / baudrate;
-    channel.serial_reg->BAUDH = (baudReg & 0xF0) >> 8;
-    channel.serial_reg->BAUDL = (baudReg & 0x0F) >> 0;
+    uint16_t baudReg = ((40 * (uint32_t)F_CPU) / baudrate) / 10;
+    channel.serial_reg->BAUD = baudReg;
 
     // Set frame format
     channel.serial_reg->CTRLC = 0;
