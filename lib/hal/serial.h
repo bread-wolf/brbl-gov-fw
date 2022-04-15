@@ -6,7 +6,7 @@
 #ifndef SERIAL_H_
 #define SERIAL_H_
 
-#include "ringBuff.h"
+#include "helpers/ringBuff.h"
 
 #include <avr/io.h>
 

@@ -5,7 +5,7 @@
 
 #include "serial.h"
 
-#include "ringBuff.h"
+#include "helpers/ringBuff.h"
 
 #include "avr/interrupt.h"
 #include <avr/io.h>
