@@ -44,8 +44,8 @@ serial_channel serial_channel0 = {
     .serial_ringBuff = NULL,
 };
 #else
-uint8_t serial_channel0_data[SERIAL_RING_BUFF_LENGTH];
-ringBuff serial_channel0_rb = {
+static uint8_t serial_channel0_data[SERIAL_RING_BUFF_LENGTH];
+static ringBuff serial_channel0_rb = {
     .data = serial_channel0_data,
     .head = 0,
     .tail = 0,
@@ -63,8 +63,8 @@ serial_channel serial_channel1 = {
     .serial_ringBuff = NULL,
 };
 #else
-uint8_t serial_channel1_data[SERIAL_RING_BUFF_LENGTH];
-ringBuff serial_channel1_rb = {
+static uint8_t serial_channel1_data[SERIAL_RING_BUFF_LENGTH];
+static ringBuff serial_channel1_rb = {
     .data = serial_channel1_data,
     .head = 0,
     .tail = 0,
@@ -82,8 +82,8 @@ serial_channel serial_channel2 = {
     .serial_ringBuff = NULL,
 };
 #else
-uint8_t serial_channel2_data[SERIAL_RING_BUFF_LENGTH];
-ringBuff serial_channel2_rb = {
+static uint8_t serial_channel2_data[SERIAL_RING_BUFF_LENGTH];
+static ringBuff serial_channel2_rb = {
     .data = serial_channel2_data,
     .head = 0,
     .tail = 0,
@@ -101,8 +101,8 @@ serial_channel serial_channel3 = {
     .serial_ringBuff = NULL,
 };
 #else
-uint8_t serial_channel3_data[SERIAL_RING_BUFF_LENGTH];
-ringBuff serial_channel3_rb = {
+static uint8_t serial_channel3_data[SERIAL_RING_BUFF_LENGTH];
+static ringBuff serial_channel3_rb = {
     .data = serial_channel3_data,
     .head = 0,
     .tail = 0,
