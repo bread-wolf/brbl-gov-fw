@@ -18,7 +18,8 @@
 typedef struct
 {
     USART_t* const serial_reg;
-    ringBuff* const serial_ringBuff;
+    ringBuff* const serial_readBuff;
+    ringBuff* const serial_writeBuff;
 } serial_channel;
 extern serial_channel serial_channel0;
 extern serial_channel serial_channel1;

@@ -44,17 +44,25 @@
 // Macro to define serial_channeln structs.
 // Contain the pointer to the USART registers, as well as a ring buffer as defined in helpers/ringBuff.h.
 // These are instantiated lower along with IRQ code.
-#define SERIAL_INSTANTIATE_CHANNEL(n)                                     \
-    static uint8_t serial_channel ## n ## _data[SERIAL_RING_BUFF_LENGTH]; \
-    static ringBuff serial_channel ## n ## _rb = {                        \
-        .data = serial_channel ## n ## _data,                             \
-        .head = 0,                                                        \
-        .tail = 0,                                                        \
-        .length = SERIAL_RING_BUFF_LENGTH,                                \
-    };                                                                    \
-    serial_channel serial_channel ## n = {                                \
-        .serial_reg = &USART ## n,                                        \
-        .serial_ringBuff = &serial_channel ## n ## _rb,                   \
+#define SERIAL_INSTANTIATE_CHANNEL(n)                                      \
+    static uint8_t serial_channel ## n ## _read[SERIAL_RING_BUFF_LENGTH];  \
+    static uint8_t serial_channel ## n ## _write[SERIAL_RING_BUFF_LENGTH]; \
+    static ringBuff serial_channel ## n ## _read_rb = {                    \
+        .data = serial_channel ## n ## _read,                              \
+        .head = 0,                                                         \
+        .tail = 0,                                                         \
+        .length = SERIAL_RING_BUFF_LENGTH,                                 \
+    };                                                                     \
+    static ringBuff serial_channel ## n ## _write_rb = {                   \
+        .data = serial_channel ## n ## _write,                             \
+        .head = 0,                                                         \
+        .tail = 0,                                                         \
+        .length = SERIAL_RING_BUFF_LENGTH,                                 \
+    };                                                                     \
+    serial_channel serial_channel ## n = {                                 \
+        .serial_reg = &USART ## n,                                         \
+        .serial_readBuff = &serial_channel ## n ## _read_rb,               \
+        .serial_writeBuff = &serial_channel ## n ## _write_rb,             \
 };
 
 // Local IRQ handler functions, called from inside each UARTx IRQ.
