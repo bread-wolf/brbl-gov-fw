@@ -10,6 +10,12 @@
 #include "avr/interrupt.h"
 #include <avr/io.h>
 
+// Configure which UART channels will be used.
+#define SERIAL_USE_UART0
+//#define SERIAL_USE_UART1
+//#define SERIAL_USE_UART2
+//#define SERIAL_USE_UART3
+
 // Defines to decode serial_format enum.
 // | Bit 6 | Bit 5 | Bit 4 | Bit 3 | Bit 2 | Bit 1 |        Bit 0        |
 // |       Number of data bits     |  Parity Type  | Number of Stop bits |
@@ -32,87 +38,26 @@
 #define SERIAL_MIN_NUM_DATA_BITS         5
 #define SERIAL_MAX_BAUDRATE              ((F_CPU) / 64) // Assume we only use 16x oversampling
 
-// Ring buffer length, must be a power of 2.
-#define SERIAL_RING_BUFF_LENGTH          16
+// UART Software buffer size, must be a power of 2
+#define SERIAL_RING_BUFF_LENGTH 16
 
-// Instantiate serial_channel structs here.
-// Structs contain the pointer to the USART registers, as well as a ring buffer as defined in helpers/ringBuff.h
-// If we don't use the USART, then the struct is instantiated with NULL pointers which would make the uart init fail.
-#ifndef SERIAL_USE_UART0
-serial_channel serial_channel0 = {
-    .serial_reg = NULL,
-    .serial_ringBuff = NULL,
+// Macro to define serial_channeln structs.
+// Contain the pointer to the USART registers, as well as a ring buffer as defined in helpers/ringBuff.h.
+// These are instantiated lower along with IRQ code.
+#define SERIAL_INSTANTIATE_CHANNEL(n)                                     \
+    static uint8_t serial_channel ## n ## _data[SERIAL_RING_BUFF_LENGTH]; \
+    static ringBuff serial_channel ## n ## _rb = {                        \
+        .data = serial_channel ## n ## _data,                             \
+        .head = 0,                                                        \
+        .tail = 0,                                                        \
+        .length = SERIAL_RING_BUFF_LENGTH,                                \
+    };                                                                    \
+    serial_channel serial_channel ## n = {                                \
+        .serial_reg = &USART ## n,                                        \
+        .serial_ringBuff = &serial_channel ## n ## _rb,                   \
 };
-#else
-static uint8_t serial_channel0_data[SERIAL_RING_BUFF_LENGTH];
-static ringBuff serial_channel0_rb = {
-    .data = serial_channel0_data,
-    .head = 0,
-    .tail = 0,
-    .length = SERIAL_RING_BUFF_LENGTH,
-};
-serial_channel serial_channel0 = {
-    .serial_reg = USART0,
-    .serial_ringBuff = &serial_channel0_rb,
-};
-#endif /* SERIAL_USE_UART0 */
 
-#ifndef SERIAL_USE_UART1
-serial_channel serial_channel1 = {
-    .serial_reg = NULL,
-    .serial_ringBuff = NULL,
-};
-#else
-static uint8_t serial_channel1_data[SERIAL_RING_BUFF_LENGTH];
-static ringBuff serial_channel1_rb = {
-    .data = serial_channel1_data,
-    .head = 0,
-    .tail = 0,
-    .length = SERIAL_RING_BUFF_LENGTH,
-};
-serial_channel serial_channel1 = {
-    .serial_reg = USART1,
-    .serial_ringBuff = &serial_channel1_rb,
-};
-#endif  /* SERIAL_USE_UART1 */
-
-#ifndef SERIAL_USE_UART2
-serial_channel serial_channel2 = {
-    .serial_reg = NULL,
-    .serial_ringBuff = NULL,
-};
-#else
-static uint8_t serial_channel2_data[SERIAL_RING_BUFF_LENGTH];
-static ringBuff serial_channel2_rb = {
-    .data = serial_channel2_data,
-    .head = 0,
-    .tail = 0,
-    .length = SERIAL_RING_BUFF_LENGTH,
-};
-serial_channel serial_channel2 = {
-    .serial_reg = USART2,
-    .serial_ringBuff = &serial_channel2_rb,
-};
-#endif  /* SERIAL_USE_UART2 */
-
-#ifndef SERIAL_USE_UART3
-serial_channel serial_channel3 = {
-    .serial_reg = NULL,
-    .serial_ringBuff = NULL,
-};
-#else
-static uint8_t serial_channel3_data[SERIAL_RING_BUFF_LENGTH];
-static ringBuff serial_channel3_rb = {
-    .data = serial_channel3_data,
-    .head = 0,
-    .tail = 0,
-    .length = SERIAL_RING_BUFF_LENGTH,
-};
-serial_channel serial_channel3 = {
-    .serial_reg = USART3,
-    .serial_ringBuff = &serial_channel3_rb,
-};
-#endif  /* SERIAL_USE_UART3 */
+// Local IRQ handler functions, called from inside each UARTx IRQ.
 
 
 
@@ -159,3 +104,20 @@ bool serial_init(serial_channel channel, uint32_t baudrate, serial_format format
     sei();
     return true;
 }
+
+
+#ifdef SERIAL_USE_UART0
+SERIAL_INSTANTIATE_CHANNEL(0);
+#endif /* SERIAL_USE_UART0 */
+
+#ifdef SERIAL_USE_UART1
+SERIAL_INSTANTIATE_CHANNEL(1);
+#endif /* SERIAL_USE_UART1 */
+
+#ifdef SERIAL_USE_UART2
+SERIAL_INSTANTIATE_CHANNEL(2);
+#endif /* SERIAL_USE_UART2 */
+
+#ifdef SERIAL_USE_UART3
+SERIAL_INSTANTIATE_CHANNEL(3);
+#endif /* SERIAL_USE_UART3 */

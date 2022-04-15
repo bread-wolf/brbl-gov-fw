@@ -14,7 +14,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// Define SERIAL_USE_UARTx in main to instantiate needed channels.
+// Define SERIAL_USE_UARTx in serial.c to instantiate needed channels.
 typedef struct
 {
     USART_t* const serial_reg;
@@ -40,7 +40,6 @@ typedef enum
     SERIAL_FRAME_8O1 = 0x46,
     SERIAL_FRAME_8O2 = 0x47,
 } serial_format;
-
 
 // Used to init or reinit chosen UART peripheral.
 // Does not handle pin mux or direction (RX and TX need to be set as input and output).
