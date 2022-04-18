@@ -6,6 +6,8 @@
 #ifndef RINGBUFF_H_
 #define RINGBUFF_H_
 
+#include <avr/interrupt.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -24,7 +26,10 @@ inline __attribute__((always_inline)) bool ringBuff_push(ringBuff* buffer, const
 
     buffer->data[buffer->head] = *wByte;
 
+    cli();
     buffer->head = next;
+    sei();
+
     return true;
 }
 
@@ -36,7 +41,10 @@ inline __attribute__((always_inline)) bool ringBuff_pop(ringBuff* buffer, uint8_
     size_t next = (buffer->tail + 1) & (buffer->length - 1);
     *rByte = buffer->data[buffer->tail];
 
+    cli();
     buffer->tail = next;
+    sei();
+
     return true;
 }
 
@@ -47,8 +55,10 @@ inline __attribute__((always_inline)) size_t ringBuff_count(ringBuff* buffer)
 
 inline __attribute__((always_inline)) void ringBuff_clear(ringBuff* buffer)
 {
+    cli();
     buffer->head = 0;
     buffer->tail = 0;
+    sei();
 }
 
 #endif /* RINGBUFF_H_ */
