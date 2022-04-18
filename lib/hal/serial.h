@@ -15,7 +15,7 @@
 // Serial ring buffer struct, used internally.
 typedef struct {
     uint8_t* const data;
-    size_t head, tail;
+    volatile size_t head, tail;
     const size_t length; // Length must be a power of 2.
 } serial_buffer;
 
