@@ -5,8 +5,6 @@
 
 #include "serial.h"
 
-#include "helpers/ringBuff.h"
-
 #include "avr/interrupt.h"
 #include <avr/io.h>
 
@@ -42,30 +40,33 @@
 #define SERIAL_RING_BUFF_LENGTH 16
 
 // Macro to define serial_channeln structs.
-// Contain the pointer to the USART registers, as well as a ring buffer as defined in helpers/ringBuff.h.
+// Contain the pointer to the USART registers, as well as a ring buffer as defined above.
 // These are instantiated lower along with IRQ code.
-#define SERIAL_INSTANTIATE_CHANNEL(n)                                      \
-    static uint8_t serial_channel ## n ## _read[SERIAL_RING_BUFF_LENGTH];  \
-    static uint8_t serial_channel ## n ## _write[SERIAL_RING_BUFF_LENGTH]; \
-    static ringBuff serial_channel ## n ## _read_rb = {                    \
-        .data = serial_channel ## n ## _read,                              \
-        .head = 0,                                                         \
-        .tail = 0,                                                         \
-        .length = SERIAL_RING_BUFF_LENGTH,                                 \
-    };                                                                     \
-    static ringBuff serial_channel ## n ## _write_rb = {                   \
-        .data = serial_channel ## n ## _write,                             \
-        .head = 0,                                                         \
-        .tail = 0,                                                         \
-        .length = SERIAL_RING_BUFF_LENGTH,                                 \
-    };                                                                     \
-    serial_channel serial_channel ## n = {                                 \
-        .serial_reg = &USART ## n,                                         \
-        .serial_readBuff = &serial_channel ## n ## _read_rb,               \
-        .serial_writeBuff = &serial_channel ## n ## _write_rb,             \
+#define SERIAL_INSTANTIATE_CHANNEL(n)                                          \
+    static uint8_t serial_channel ## n ## _rx_array[SERIAL_RING_BUFF_LENGTH];  \
+    static uint8_t serial_channel ## n ## _tx_array[SERIAL_RING_BUFF_LENGTH];  \
+    static serial_buffer serial_channel ## n ## _rx_readbuffer = {             \
+        .data = serial_channel ## n ## _rx_array,                              \
+        .head = 0,                                                             \
+        .tail = 0,                                                             \
+        .length = SERIAL_RING_BUFF_LENGTH,                                     \
+    };                                                                         \
+    static serial_buffer serial_channel ## n ## _tx_readbuffer = {             \
+        .data = serial_channel ## n ## _tx_array,                              \
+        .head = 0,                                                             \
+        .tail = 0,                                                             \
+        .length = SERIAL_RING_BUFF_LENGTH,                                     \
+    };                                                                         \
+    serial_channel serial_channel ## n = {                                     \
+        .serial_reg = &USART ## n,                                             \
+        .serial_rxBuff = &serial_channel ## n ## _rx_readbuffer,               \
+        .serial_txBuff = &serial_channel ## n ## _tx_readbuffer,               \
 };
 
 // Local IRQ handler functions, called from inside each UARTx IRQ.
+
+// Helper to calculate the number of elements in a ring buffer.
+static size_t serial_count(serial_buffer* buffer);
 
 
 
@@ -114,33 +115,71 @@ bool serial_init(serial_channel channel, uint32_t baudrate, serial_format format
 
 bool serial_read(serial_channel channel, uint8_t* rData)
 {
-    return ringBuff_pop(channel.serial_readBuff, rData);
+    // If head == tail, buffer is empty, return false.
+    if (channel.serial_rxBuff->head == channel.serial_rxBuff->tail)
+        return false;
+
+    // Calculate next tail, and read data into rData at current tail.
+    size_t next = (channel.serial_rxBuff->tail + 1) & (channel.serial_rxBuff->length - 1);
+    *rData = channel.serial_rxBuff->data[channel.serial_rxBuff->tail];
+
+    // Atomically update tail and return true.
+    cli();
+    channel.serial_rxBuff->tail = next;
+    sei();
+
+    return true;
 }
 
 bool serial_write(serial_channel channel, const uint8_t* wData)
 {
-    return ringBuff_push(channel.serial_writeBuff, wData);
+    // Calculate next head, if it collides with tail, buffer is full, return false.
+    size_t next = (channel.serial_txBuff->head + 1) & (channel.serial_txBuff->length - 1);
+    if (next == channel.serial_txBuff->tail)
+        return false;
+
+    // Write wData into data array at current head.
+    channel.serial_txBuff->data[channel.serial_txBuff->head] = *wData;
+
+    // Atomically update head, and return.
+    cli();
+    channel.serial_txBuff->head = next;
+    sei();
+
+    return true;
 }
 
 int serial_available(serial_channel channel)
 {
-    return ringBuff_count(channel.serial_readBuff);
+    return serial_count(channel.serial_rxBuff);
 }
 
 int serial_availableForWrite(serial_channel channel)
 {
-    return channel.serial_writeBuff->length - ringBuff_count(channel.serial_writeBuff);
+    return channel.serial_txBuff->length - serial_count(channel.serial_txBuff);
 }
 
 void serial_flush(serial_channel channel)
 {
-    while (ringBuff_count(channel.serial_writeBuff) > 0);
+    while (serial_count(channel.serial_txBuff) > 0);
 }
 
 void serial_clear(serial_channel channel)
 {
-    ringBuff_clear(channel.serial_writeBuff);
+    // Empty hardware buffer.
+
+
+    // Empty software buffer.
+    cli();
+    channel.serial_rxBuff->head = 0;
+    channel.serial_rxBuff->tail = 0;
+    sei();
 }
+static size_t serial_count(serial_buffer* buffer)
+{
+    return (buffer->head >= buffer->tail) ? (buffer->head - buffer->tail) : (buffer->length - (buffer->tail - buffer->head));
+}
+
 #ifdef SERIAL_USE_UART0
 SERIAL_INSTANTIATE_CHANNEL(0);
 #endif /* SERIAL_USE_UART0 */

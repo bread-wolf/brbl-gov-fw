@@ -6,20 +6,25 @@
 #ifndef SERIAL_H_
 #define SERIAL_H_
 
-#include "helpers/ringBuff.h"
-
 #include <avr/io.h>
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
+// Serial ring buffer struct, used internally.
+typedef struct {
+    uint8_t* const data;
+    size_t head, tail;
+    const size_t length; // Length must be a power of 2.
+} serial_buffer;
+
 // Define SERIAL_USE_UARTx in serial.c to instantiate needed channels.
 typedef struct
 {
     USART_t* const serial_reg;
-    ringBuff* const serial_readBuff;
-    ringBuff* const serial_writeBuff;
+    serial_buffer* const serial_rxBuff;
+    serial_buffer* const serial_txBuff;
 } serial_channel;
 extern serial_channel serial_channel0;
 extern serial_channel serial_channel1;
