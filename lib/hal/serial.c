@@ -95,27 +95,31 @@ bool serial_init(serial_channel channel, uint32_t baudrate, serial_format format
     if (parityType == SERIAL_PARITY_RESERVED)
         return false;
 
-    // Disable interrupts and configure UART module.
-    cli();
-
-    // Write baudrate, fomula assumes we only use 16x oversampling.
+    // Calculate baudrate register, fomula assumes we only use 16x oversampling.
     uint16_t baudReg = ((40 * (uint32_t)F_CPU) / baudrate) / 10;
+
+    // Make sure interrupts are disabled during initialization.
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+    {
+        // Write baudrate
     channel.serial_reg->BAUD = baudReg;
 
-    // Set frame format
+        // Set frame format (Top two bits are left to 0 for synchronous mode).
     channel.serial_reg->CTRLC = 0;
     channel.serial_reg->CTRLC |= ((numDataBits - 5) << USART_CHSIZE_gp) & USART_CHSIZE_gm;
     channel.serial_reg->CTRLC |= (numStopBits << USART_SBMODE_bp) & USART_SBMODE_bm;
     channel.serial_reg->CTRLC |= (parityType << USART_PMODE_gp) & USART_PMODE_gm;
 
-    // Enable transmitter and receiver and enforce UART normal mode.
-    channel.serial_reg->CTRLB = (USART_RXEN_bm | USART_TXEN_bm);
+        // Enable normal mode by clearing RXMODE field, and enable TX and RX.
+        // It is still possible to enable SFDEN or ODME by configuring before calling this serial_init function.
+        channel.serial_reg->CTRLB &= ~(USART_RXMODE1_bm | USART_RXMODE0_bm);
+        channel.serial_reg->CTRLB |= (USART_RXEN_bm | USART_TXEN_bm);
 
-    // Enable Receive Complete and Transmit Complete interrupts.
-    channel.serial_reg->CTRLA = (USART_RXCIE_bm | USART_DREIE_bm);
+        // Enable Receive Complete interrupts.
+        // Data register empty (UDRE) interrupt is configured elsewhere.
+        channel.serial_reg->CTRLA = (USART_RXCIE_bm);
+    }
 
-    // Enable interrupts and return true.
-    sei();
     return true;
 }
 
