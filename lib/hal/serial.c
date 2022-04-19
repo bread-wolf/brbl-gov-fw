@@ -64,6 +64,8 @@
 };
 
 // Local IRQ handler functions, called from inside each UARTx IRQ.
+static void handle_receiveComplete(serial_channel channel);
+static void handle_transmitEmpty(serial_channel channel);
 
 // Helper to calculate the number of elements in a ring buffer.
 static size_t serial_count(serial_buffer* buffer);
@@ -175,23 +177,60 @@ void serial_clear(serial_channel channel)
     channel.serial_rxBuff->tail = 0;
     sei();
 }
-static size_t serial_count(serial_buffer* buffer)
+static void handle_receiveComplete(serial_channel channel)
 {
-    return (buffer->head >= buffer->tail) ? (buffer->head - buffer->tail) : (buffer->length - (buffer->tail - buffer->head));
+
+}
+
+static void handle_transmitEmpty(serial_channel channel)
+{
+
 }
 
 #ifdef SERIAL_USE_UART0
 SERIAL_INSTANTIATE_CHANNEL(0);
+ISR(USART0_RXC_vect)
+{
+    handle_receiveComplete(serial_channel0);
+}
+ISR(USART0_DRE_vect)
+{
+    handle_transmitEmpty(serial_channel0);
+}
 #endif /* SERIAL_USE_UART0 */
 
 #ifdef SERIAL_USE_UART1
 SERIAL_INSTANTIATE_CHANNEL(1);
+ISR(USART1_RXC_vect)
+{
+    handle_receiveComplete(serial_channel1);
+}
+ISR(USART1_DRE_vect)
+{
+    handle_transmitEmpty(serial_channel1);
+}
 #endif /* SERIAL_USE_UART1 */
 
 #ifdef SERIAL_USE_UART2
 SERIAL_INSTANTIATE_CHANNEL(2);
+ISR(USART2_RXC_vect)
+{
+    handle_receiveComplete(serial_channel2);
+}
+ISR(USART2_DRE_vect)
+{
+    handle_transmitEmpty(serial_channel2);
+}
 #endif /* SERIAL_USE_UART2 */
 
 #ifdef SERIAL_USE_UART3
 SERIAL_INSTANTIATE_CHANNEL(3);
+ISR(USART3_RXC_vect)
+{
+    handle_receiveComplete(serial_channel3);
+}
+ISR(USART3_DRE_vect)
+{
+    handle_transmitEmpty(serial_channel3);
+}
 #endif /* SERIAL_USE_UART3 */
