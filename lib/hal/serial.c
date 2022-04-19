@@ -36,11 +36,15 @@
 #define SERIAL_MIN_NUM_DATA_BITS         5
 #define SERIAL_MAX_BAUDRATE              ((F_CPU) / 64) // Assume we only use 16x oversampling
 
-// UART Software buffer size, must be a power of 2
-#define SERIAL_RING_BUFF_LENGTH 16
+// UART Software buffer size, should be a power of 2 to optimize modulo operations.
+#define SERIAL_RING_BUFF_LENGTH          16
+
+// Busy wait for tx buffer to empty in case we try to write to a full buffer.
+// If false, we just drop the data instead of corrupting the oldest data in the buffer.
+#define SERIAL_TX_BLOCK_WHEN_FULL       true
 
 // Macro to define serial_channeln structs.
-// Contain the pointer to the USART registers, as well as a ring buffer as defined above.
+// Contain the pointer to the USART registers, as well as a ring buffer as defined in header.
 // These are instantiated lower along with IRQ code.
 #define SERIAL_INSTANTIATE_CHANNEL(n)                                          \
     static uint8_t serial_channel ## n ## _rx_array[SERIAL_RING_BUFF_LENGTH];  \
