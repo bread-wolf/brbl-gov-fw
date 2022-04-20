@@ -65,5 +65,4 @@ void serial_flush(serial_channel channel);
 // Discard received data that has not been read.
 void serial_clear(serial_channel channel);
 
-
 #endif /* SERIAL_H_ */
