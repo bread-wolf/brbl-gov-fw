@@ -66,9 +66,9 @@
         .length = SERIAL_RING_BUFF_LENGTH,                                     \
     };                                                                         \
     serial_channel serial_channel ## n = {                                     \
-        .serial_reg = &USART ## n,                                             \
-        .serial_rxBuff = &serial_channel ## n ## _rx_readbuffer,               \
-        .serial_txBuff = &serial_channel ## n ## _tx_readbuffer,               \
+        .reg = &USART ## n,                                             \
+        .rxBuff = &serial_channel ## n ## _rx_readbuffer,               \
+        .txBuff = &serial_channel ## n ## _tx_readbuffer,               \
 };
 
 // Local IRQ handler functions, called from inside each UARTx IRQ.
@@ -80,7 +80,7 @@ static void handle_transmitEmpty(serial_channel channel);
 bool serial_init(serial_channel channel, uint32_t baudrate, serial_format format)
 {
     // Verify input arguments
-    if ((channel.serial_reg == NULL) || (channel.serial_rxBuff == NULL) || (channel.serial_txBuff))
+    if ((channel.reg == NULL) || (channel.rxBuff == NULL) || (channel.txBuff))
         return false;
 
     if (baudrate > SERIAL_MAX_BAUDRATE)
@@ -103,22 +103,22 @@ bool serial_init(serial_channel channel, uint32_t baudrate, serial_format format
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
     {
         // Write baudrate
-        channel.serial_reg->BAUD = baudReg;
+        channel.reg->BAUD = baudReg;
 
         // Set frame format (Top two bits are left to 0 for synchronous mode).
-        channel.serial_reg->CTRLC = 0;
-        channel.serial_reg->CTRLC |= ((numDataBits - 5) << USART_CHSIZE_gp) & USART_CHSIZE_gm;
-        channel.serial_reg->CTRLC |= (numStopBits << USART_SBMODE_bp) & USART_SBMODE_bm;
-        channel.serial_reg->CTRLC |= (parityType << USART_PMODE_gp) & USART_PMODE_gm;
+        channel.reg->CTRLC = 0;
+        channel.reg->CTRLC |= ((numDataBits - 5) << USART_CHSIZE_gp) & USART_CHSIZE_gm;
+        channel.reg->CTRLC |= (numStopBits << USART_SBMODE_bp) & USART_SBMODE_bm;
+        channel.reg->CTRLC |= (parityType << USART_PMODE_gp) & USART_PMODE_gm;
 
         // Enable normal mode by clearing RXMODE field, and enable TX and RX.
         // It is still possible to enable SFDEN or ODME by configuring before calling this serial_init function.
-        channel.serial_reg->CTRLB &= ~(USART_RXMODE1_bm | USART_RXMODE0_bm);
-        channel.serial_reg->CTRLB |= (USART_RXEN_bm | USART_TXEN_bm);
+        channel.reg->CTRLB &= ~(USART_RXMODE1_bm | USART_RXMODE0_bm);
+        channel.reg->CTRLB |= (USART_RXEN_bm | USART_TXEN_bm);
 
         // Enable Receive Complete interrupts.
         // Data register empty (UDRE) interrupt is configured elsewhere.
-        channel.serial_reg->CTRLA = (USART_RXCIE_bm);
+        channel.reg->CTRLA = (USART_RXCIE_bm);
     }
 
     return true;
@@ -127,14 +127,14 @@ bool serial_init(serial_channel channel, uint32_t baudrate, serial_format format
 bool serial_read(serial_channel channel, uint8_t* rData)
 {
     // If head == tail, buffer is empty, return false.
-    if (channel.serial_rxBuff->head == channel.serial_rxBuff->tail)
+    if (channel.rxBuff->head == channel.rxBuff->tail)
         return false;
 
     // Read data[tail] into rData.
-    *rData = channel.serial_rxBuff->data[channel.serial_rxBuff->tail];
+    *rData = channel.rxBuff->data[channel.rxBuff->tail];
 
     // Update tail and return true.
-    channel.serial_rxBuff->tail = (channel.serial_rxBuff->tail + 1) % channel.serial_rxBuff->length;
+    channel.rxBuff->tail = (channel.rxBuff->tail + 1) % channel.rxBuff->length;
     return true;
 }
 
@@ -142,19 +142,19 @@ bool serial_write(serial_channel channel, const uint8_t* wData)
 {
     // If software buffer and data register empty, directly write to the data register and return.
     // This improves performances at high data rates by avoiding the interrupt overhead.
-    if ((channel.serial_txBuff->head == channel.serial_txBuff->tail) && (channel.serial_reg->STATUS & USART_DREIF_bm))
+    if ((channel.txBuff->head == channel.txBuff->tail) && (channel.reg->STATUS & USART_DREIF_bm))
     {
-        channel.serial_reg->TXDATAL = *wData;
-        channel.serial_reg->STATUS = USART_TXCIF_bm;
+        channel.reg->TXDATAL = *wData;
+        channel.reg->STATUS = USART_TXCIF_bm;
 
         // Disable DREIE interrupt to prevent it from being called in this situation and return.
-        channel.serial_reg->CTRLA &= (~USART_DREIE_bm);
+        channel.reg->CTRLA &= (~USART_DREIE_bm);
         return true;
     }
 
     // Calculate next head, if it collides with tail, buffer is full.
-    size_t next = (channel.serial_txBuff->head + 1) % channel.serial_txBuff->length;
-    if (next == channel.serial_txBuff->tail)
+    size_t next = (channel.txBuff->head + 1) % channel.txBuff->length;
+    if (next == channel.txBuff->tail)
     {
         if (!SERIAL_TX_BLOCK_WHEN_FULL)
         {
@@ -167,17 +167,17 @@ bool serial_write(serial_channel channel, const uint8_t* wData)
             {
                 // Wait here for some space to free up in the buffer.
                 // Ensure interrupts are enabled so we don't fall into an infinite loop.
-                while ((next == channel.serial_txBuff->tail));
+                while ((next == channel.txBuff->tail));
             }
         }
     }
 
     // Write wData into data array at current head.
-    channel.serial_txBuff->data[channel.serial_txBuff->head] = *wData;
-    channel.serial_txBuff->head = next;
+    channel.txBuff->data[channel.txBuff->head] = *wData;
+    channel.txBuff->head = next;
 
     // Enable DREIE interrupt and return.
-    channel.serial_reg->CTRLA |= USART_DREIE_bm;
+    channel.reg->CTRLA |= USART_DREIE_bm;
     return true;
 }
 
@@ -186,10 +186,10 @@ int serial_available(serial_channel channel)
     size_t head, tail;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
     {
-        head = channel.serial_rxBuff->head;
-        tail = channel.serial_rxBuff->tail;
+        head = channel.rxBuff->head;
+        tail = channel.rxBuff->tail;
     }
-    return (channel.serial_rxBuff->length + head - tail) % channel.serial_rxBuff->length;
+    return (channel.rxBuff->length + head - tail) % channel.rxBuff->length;
 }
 
 int serial_availableForWrite(serial_channel channel)
@@ -197,10 +197,10 @@ int serial_availableForWrite(serial_channel channel)
     size_t head, tail;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
     {
-        head = channel.serial_rxBuff->head;
-        tail = channel.serial_rxBuff->tail;
+        head = channel.rxBuff->head;
+        tail = channel.rxBuff->tail;
     }
-    return (head >= tail) ? channel.serial_rxBuff->length - 1 - head + tail : tail - head - 1;
+    return (head >= tail) ? channel.rxBuff->length - 1 - head + tail : tail - head - 1;
 }
 
 void serial_flush(serial_channel channel)
@@ -209,10 +209,10 @@ void serial_flush(serial_channel channel)
     NONATOMIC_BLOCK(ATOMIC_RESTORESTATE)
     {
         // Wait here for the tx software buffer to empty.
-        while ((channel.serial_txBuff->head != channel.serial_txBuff->tail));
+        while ((channel.txBuff->head != channel.txBuff->tail));
 
         // Wait for the data to actually shift out onto the line.
-        while (!(channel.serial_reg->STATUS & USART_TXCIF_bm));
+        while (!(channel.reg->STATUS & USART_TXCIF_bm));
     }
 }
 
@@ -222,16 +222,16 @@ void serial_clear(serial_channel channel)
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
     {
         // Empty hardware buffer.
-        while(channel.serial_reg->RXDATAH & USART_RXCIF_bm)
+        while(channel.reg->RXDATAH & USART_RXCIF_bm)
         {
-            channel.serial_reg->RXDATAL;
+            channel.reg->RXDATAL;
         }
 
         // Empty software buffer by atomically updating indexes.
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
         {
-            channel.serial_rxBuff->head = 0;
-            channel.serial_rxBuff->tail = 0;
+            channel.rxBuff->head = 0;
+            channel.rxBuff->tail = 0;
         }
     }
 }
@@ -239,47 +239,47 @@ void serial_clear(serial_channel channel)
 static void handle_receiveComplete(serial_channel channel)
 {
     #ifdef SERIAL_RX_CHECK_PARITY
-        if (channel.serial_reg->RXDATAH & USART_PERR_bm)
+        if (channel.reg->RXDATAH & USART_PERR_bm)
         {
             // Discard byte and return
-            channel.serial_reg->RXDATAL;
+            channel.reg->RXDATAL;
             return;
         }
     #endif /* SERIAL_RX_CHECK_PARITY */
 
     // Calculate next head, if it collides with tail, buffer is full.
-    size_t next = (channel.serial_rxBuff->head + 1) % channel.serial_rxBuff->length;
-    if (next == channel.serial_rxBuff->tail)
+    size_t next = (channel.rxBuff->head + 1) % channel.rxBuff->length;
+    if (next == channel.rxBuff->tail)
     {
         // Discard byte and return
-        channel.serial_reg->RXDATAL;
+        channel.reg->RXDATAL;
         return;
     }
 
     // Write received byte into data array at current head and return.
-    channel.serial_rxBuff->data[channel.serial_rxBuff->head] = channel.serial_reg->RXDATAL;
-    channel.serial_rxBuff->head = next;
+    channel.rxBuff->data[channel.rxBuff->head] = channel.reg->RXDATAL;
+    channel.rxBuff->head = next;
 }
 
 static void handle_transmitEmpty(serial_channel channel)
 {
     // If software buffer empty, we're done here,
     // Disable interrupt and return.
-    if (channel.serial_txBuff->head == channel.serial_txBuff->tail)
+    if (channel.txBuff->head == channel.txBuff->tail)
     {
-        channel.serial_reg->CTRLA &= (~USART_DREIE_bm);
+        channel.reg->CTRLA &= (~USART_DREIE_bm);
         return;
     }
 
     // Clear the tx complete flag BEFORE writing next byte to tx buffer.
     // This ensures that flush will return only after the bytes actually got shifted out.
-    channel.serial_reg->STATUS = USART_TXCIF_bm;
+    channel.reg->STATUS = USART_TXCIF_bm;
 
     // Send next byte from tx buffer.
-    channel.serial_reg->TXDATAL = channel.serial_txBuff->data[channel.serial_txBuff->tail];
+    channel.reg->TXDATAL = channel.txBuff->data[channel.txBuff->tail];
 
     // Update tail and return.
-    channel.serial_txBuff->tail = (channel.serial_txBuff->tail + 1) % channel.serial_txBuff->length;
+    channel.txBuff->tail = (channel.txBuff->tail + 1) % channel.txBuff->length;
 }
 
 #ifdef SERIAL_USE_UART0

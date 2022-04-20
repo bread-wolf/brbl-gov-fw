@@ -22,9 +22,9 @@ typedef struct {
 // Define SERIAL_USE_UARTx in serial.c to instantiate needed channels.
 typedef struct
 {
-    USART_t* const serial_reg;
-    serial_buffer* const serial_rxBuff;
-    serial_buffer* const serial_txBuff;
+    USART_t* const reg;
+    serial_buffer* const rxBuff;
+    serial_buffer* const txBuff;
 } serial_channel;
 extern serial_channel serial_channel0;
 extern serial_channel serial_channel1;
